@@ -15,6 +15,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.9.0")
 	implementation("com.squareup.okio:okio:3.1.0")
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("junit:junit:4.13.2")
 }
 
 publishing {
