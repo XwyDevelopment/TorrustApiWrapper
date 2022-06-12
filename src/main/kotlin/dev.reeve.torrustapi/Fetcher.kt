@@ -52,7 +52,7 @@ class Fetcher(private var baseURL: String) {
 		file.parentFile.mkdirs()
 		
 		val sink = file.sink().buffer()
-		sink.writeAll(response.body.source())
+		sink.writeAll(response.body!!.source())
 		sink.close()
 		
 		return file
@@ -82,8 +82,9 @@ class Fetcher(private var baseURL: String) {
 			.addFormDataPart("description", description)
 			.addFormDataPart("category", category)
 			//.addFormDataPart()
+			.build()
 		
-		val request = Request.Builder().url(url).post(RequestBody.create(MultipartBody.FORM)).addAuth(user).build()
+		val request = Request.Builder().url(url).post(body).addAuth(user).build()
 		val response = client.newCall(request).execute()
 		
 		return getWrappedData(response.body!!.string())
@@ -96,21 +97,21 @@ class Fetcher(private var baseURL: String) {
 		
 		val response = client.newCall(request).execute()
 		
-		return getWrappedData(response.body.string())
+		return getWrappedData(response.body!!.string())
 	}
 	
 	private inline fun <reified T> deleteData(user: User, url: String): T {
 		val request = Request.Builder().url(url).delete().addAuth(user).build()
 		val response = client.newCall(request).execute()
 		
-		return getWrappedData(response.body.string())
+		return getWrappedData(response.body!!.string())
 	}
 	
 	private inline fun <reified T> getData(user: User, url: String): T {
 		val request = Request.Builder().url(url).get().addAuth(user).build()
 		val response = client.newCall(request).execute()
 		
-		return getWrappedData(response.body.string())
+		return getWrappedData(response.body!!.string())
 	}
 	
 	private inline fun <reified T> getWrappedData(body: String): T {
