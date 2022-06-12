@@ -20,12 +20,12 @@ class Fetcher(private var baseURL: String) {
 	}
 	
 	/*
-	* Grab the list of games
+	* Grab the list of all posts
 	* Blocks the current thread, should probably be run async
 	* Based on this url found on the site
 	* https://dl.rpdl.net/api/torrents?page_size=20&page=0&sort=uploaded_DESC&categories=&search=
 	*/
-	fun getGames(user: User, sorting: Sorting, sortingOrder: SortingOrder, limit: Int, page: Int): GameListings {
+	fun getListings(user: User, sorting: Sorting, sortingOrder: SortingOrder, limit: Int, page: Int): Listings {
 		val url = baseURL + "torrents?" +
 				"page_size=${limit}" +
 				"&page=${page}" +
@@ -36,18 +36,18 @@ class Fetcher(private var baseURL: String) {
 		return getData(user, url)
 	}
 	
-	fun getGame(user: User, game: Long): FullWebGame {
-		val url = baseURL + "torrent/${game}"
+	fun getWebListing(user: User, id: Long): FullWebListing {
+		val url = baseURL + "torrent/${id}"
 		return getData(user, url)
 	}
 	
-	fun getTorrentFile(user: User, game: Long): File {
-		val url = baseURL + "torrent/download/${game}"
+	fun getTorrentFile(user: User, id: Long): File {
+		val url = baseURL + "torrent/download/${id}"
 		val request = Request.Builder().url(url).get().addAuth(user).build()
 		val response = client.newCall(request).execute()
 		
-		val game = getGame(user, game)
-		val name = game.title + ".torrent"
+		val webListing = getWebListing(user, id)
+		val name = webListing.title + ".torrent"
 		val file = File("./torrentFiles", name)
 		file.parentFile.mkdirs()
 		
@@ -68,8 +68,8 @@ class Fetcher(private var baseURL: String) {
 		return deleteData(user, url)
 	}
 	
-	fun deleteTorrent(user: User, game: Long): TorrentResponse {
-		val url = baseURL + "torrent/${game}"
+	fun deleteTorrent(user: User, id: Long): TorrentResponse {
+		val url = baseURL + "torrent/${id}"
 		return deleteData(user, url)
 	}
 	

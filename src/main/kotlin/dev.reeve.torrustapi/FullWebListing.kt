@@ -1,6 +1,6 @@
 package dev.reeve.torrustapi
 
-class FullWebGame(
+class FullWebListing(
 	categoryId: Int,
 	description: String,
 	fileSize: String,
@@ -11,7 +11,7 @@ class FullWebGame(
 	torrentId: Long,
 	uploadDate: Long,
 	uploader: String
-) : GameListings.WebGame(
+) : Listings.WebListings(
 	categoryId,
 	description,
 	fileSize,

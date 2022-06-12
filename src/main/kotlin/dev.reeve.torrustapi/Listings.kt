@@ -2,11 +2,11 @@ package dev.reeve.torrustapi
 
 import com.google.gson.annotations.SerializedName
 
-data class GameListings(
-	val results: ArrayList<WebGame>,
+data class Listings(
+	val results: ArrayList<WebListings>,
 	val total: Int
 ) {
-	open class WebGame(
+	open class WebListings(
 		@SerializedName("category_id")
 		val categoryId: Int,
 		val description: String,
