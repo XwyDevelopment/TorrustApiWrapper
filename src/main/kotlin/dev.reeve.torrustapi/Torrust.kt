@@ -11,13 +11,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okio.buffer
 import okio.sink
 import java.io.File
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * This class is used to interact with the Torrust API.
  * @param baseURL the main url of the url (including `/torrust` if it's there)
  * @notice This class requires the use of a login
  */
-class Torrust(private var baseURL: String) {
+open class Torrust(private var baseURL: String) {
 	private val client = OkHttpClient()
 	private val JSON = "application/json".toMediaTypeOrNull()
 	private val gson = GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
@@ -28,6 +30,8 @@ class Torrust(private var baseURL: String) {
 		if (!baseURL.endsWith("/api")) {
 			baseURL += "/api/"
 		}
+		
+		
 	}
 	
 	/**
@@ -39,35 +43,85 @@ class Torrust(private var baseURL: String) {
 	 * https://dl.rpdl.net/api/torrents?page_size=20&page=0&sort=uploaded_DESC&categories=&search=
 	 */
 	fun getListings(
-		user: User,
 		search: String = "",
 		categories: Array<String> = emptyArray(),
 		sorting: Sorting = Sorting.Uploaded,
 		sortingOrder: SortingOrder = SortingOrder.DESC,
 		limit: Int = 50,
 		page: Int = 0
-	): Listings {
-		val url = baseURL + "torrents?" +
-				"page_size=${limit}" +
-				"&page=${page}" +
-				"&sort=${sorting.name.lowercase()}_${sortingOrder.name}" +
-				"&categories=${categories.joinToString(separator = ",")}" + // works with multiple as a comma separated list
-				"&search=${search.filter { it.isLetterOrDigit() }}" // looks like on the website everything other than letters and numbers are removed
+	): Listings? {
+		val url =
+			baseURL + "torrents?" + "page_size=${limit}" + "&page=${page}" + "&sort=${sorting.name.lowercase()}_${sortingOrder.name}" + "&categories=${
+				categories.joinToString(separator = ",")
+			}" + // works with multiple as a comma separated list
+					"&search=${search.filter { it.isLetterOrDigit() }}" // looks like on the website everything other than letters and numbers are removed
 		
-		return getData(user, url)
+		println(url)
+		
+		return getData(null, url)
 	}
 	
-	fun getWebListing(user: User, id: Long): FullWebListing {
+	fun getWebListing(id: Long): FullWebListing? {
 		val url = baseURL + "torrent/${id}"
-		return getData(user, url)
+		return getData(null, url)
 	}
 	
-	fun downloadTorrentFile(user: User, id: Long): File {
+	fun getNewWebListings(lastCheck: Date?, category: Category? = null): Listings? {
+		if (lastCheck != null) {
+			var page = 0
+			var lastPage = -1
+			val pageSize = 50
+			
+			if ((getListings(
+					limit = 1, categories = if (category != null) arrayOf(category.name) else emptyArray()
+				)?.results?.firstOrNull()?.uploadDate ?: error("Could not get listings")) < lastCheck.time
+			) {
+				return Listings(ArrayList(), 0)
+			}
+			
+			while (true) {
+				val listings =
+					getListings(limit = pageSize, page = page, categories = if (category != null) arrayOf(category.name) else emptyArray())
+						?: break
+				
+				if (listings.results.isEmpty()) {
+					return getListings(limit = page * pageSize, categories = if (category != null) arrayOf(category.name) else emptyArray())
+				}
+				
+				if (listings.results.last().uploadDate > lastCheck.time) {
+					if (lastPage < page) {
+						lastPage = page
+						page++
+					} else {
+						return getListings(
+							limit = page * pageSize + listings.results.size,
+							categories = if (category != null) arrayOf(category.name) else emptyArray()
+						)
+					}
+				} else {
+					for (i in listings.results.indices) {
+						if (listings.results[i].uploadDate > lastCheck.time) {
+							return getListings(
+								limit = page * pageSize + i, categories = if (category != null) arrayOf(category.name) else emptyArray()
+							)
+						}
+					}
+					page--
+				}
+			}
+			
+			return Listings(ArrayList(), 0)
+		} else {
+			return getListings(limit = -1, categories = if (category != null) arrayOf(category.name) else emptyArray())
+		}
+	}
+	
+	fun downloadTorrentFile(user: User, id: Long): File? {
 		val url = baseURL + "torrent/download/${id}"
 		val request = Request.Builder().url(url).get().addAuth(user).build()
 		val response = client.newCall(request).execute()
 		
-		val webListing = getWebListing(user, id)
+		val webListing = getWebListing(id) ?: return null
 		val name = webListing.title + ".torrent"
 		val file = File("./torrentFiles", name)
 		file.parentFile.mkdirs()
@@ -75,23 +129,28 @@ class Torrust(private var baseURL: String) {
 		val sink = file.sink().buffer()
 		sink.writeAll(response.body!!.source())
 		sink.close()
+		response.close()
 		
 		return file
 	}
 	
-	fun getWebsiteName(user: User): String {
+	fun getWebsiteName(): String? {
 		val url = baseURL + "settings/name"
-		return getData(user, url)
+		return getData(null, url)
 	}
 	
-	fun getWebsitePublicSettings(user: User): PublicSettings {
+	fun getWebsitePublicSettings(): PublicSettings? {
 		val url = baseURL + "settings/public"
-		return getData(user, url)
+		return getData(null, url)
 	}
 	
-	fun getCategories(user: User): Array<Category> {
+	fun getCategories(): Array<Category>? {
 		val url = baseURL + "category"
-		return getData(user, url)
+		return getData(null, url)
+	}
+	
+	fun getTotalTorrents(): Int? {
+		return getCategories()?.sumOf { it.numberOfTorrents }
 	}
 	
 	fun banUser(user: User, name: String): String {
@@ -108,17 +167,14 @@ class Torrust(private var baseURL: String) {
 	internal fun uploadTorrent(user: User, title: String, description: String, category: String, file: File): TorrentResponse {
 		val url = baseURL + "torrent/upload"
 		
-		val body = MultipartBody.Builder()
-			.setType(MultipartBody.FORM)
-			.addFormDataPart("title", title)
-			.addFormDataPart("description", description)
-			.addFormDataPart("category", category)
-			.build()
+		val body =
+			MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("title", title).addFormDataPart("description", description)
+				.addFormDataPart("category", category).build()
 		
 		val request = Request.Builder().url(url).post(body).addAuth(user).build()
-		val response = client.newCall(request).execute()
-		
-		return getWrappedData(response.body!!.string())
+		client.newCall(request).execute().use {
+			return getWrappedData(it.body!!.string())
+		}
 	}
 	
 	fun login(username: String, password: String): User {
@@ -126,48 +182,45 @@ class Torrust(private var baseURL: String) {
 		val login = Login(username, password)
 		val request = Request.Builder().url(url).post(gson.toJson(login).toRequestBody(JSON)).build()
 		
-		val response = client.newCall(request).execute()
-		
-		return getWrappedData(response.body!!.string())
+		client.newCall(request).execute().use {
+			return getWrappedData(it.body!!.string())
+		}
 	}
 	
 	private inline fun <reified T> deleteData(user: User, url: String): T {
 		val request = Request.Builder().url(url).delete().addAuth(user).build()
-		val response = client.newCall(request).execute()
-		
-		return getWrappedData(response.body!!.string())
+		client.newCall(request).execute().use {
+			return getWrappedData(it.body!!.string())
+		}
 	}
 	
-	private inline fun <reified T> getData(user: User, url: String): T {
+	private inline fun <reified T> getData(user: User?, url: String): T? {
 		val request = Request.Builder().url(url).get().addAuth(user).build()
-		val response = client.newCall(request).execute()
-		
-		return getWrappedData(response.body!!.string())
+		client.newCall(request).execute().use {
+			if (it.code == 400) {
+				return null
+			}
+			
+			return getWrappedData(it.body!!.string())
+		}
 	}
 	
 	private inline fun <reified T> getWrappedData(body: String): T {
 		return gson.fromJson<DataWrapper<T>>(
-			body,
-			TypeToken.getParameterized(DataWrapper::class.java, T::class.java).type
+			body, TypeToken.getParameterized(DataWrapper::class.java, T::class.java).type
 		).data
 	}
 	
-	private fun Request.Builder.addAuth(user: User): Request.Builder {
-		addHeader("authorization", "Bearer ${user.token}")
+	private fun Request.Builder.addAuth(user: User?): Request.Builder {
+		if (user != null) addHeader("authorization", "Bearer ${user.token}")
 		return this
 	}
 	
 	enum class Sorting {
-		Name,
-		Seeders,
-		Leechers,
-		Uploaded,
-		Size,
-		Uploader
+		Name, Seeders, Leechers, Uploaded, Size, Uploader
 	}
 	
 	enum class SortingOrder {
-		ASC,
-		DESC
+		ASC, DESC
 	}
 }

@@ -11,7 +11,7 @@ class FullWebListing(
 	torrentId: Long,
 	uploadDate: Long,
 	uploader: String
-) : Listings.WebListings(
+) : Listings.WebListing(
 	categoryId,
 	description,
 	fileSize,
