@@ -56,8 +56,6 @@ open class Torrust(private var baseURL: String) {
 			}" + // works with multiple as a comma separated list
 					"&search=${search.filter { it.isLetterOrDigit() }}" // looks like on the website everything other than letters and numbers are removed
 		
-		println(url)
-		
 		return getData(null, url)
 	}
 	
@@ -66,6 +64,9 @@ open class Torrust(private var baseURL: String) {
 		return getData(null, url)
 	}
 	
+	/**
+	 *
+	 */
 	fun getNewWebListings(lastCheck: Date?, category: Category? = null): Listings? {
 		if (lastCheck != null) {
 			var page = 0
@@ -73,19 +74,32 @@ open class Torrust(private var baseURL: String) {
 			val pageSize = 50
 			
 			if ((getListings(
-					limit = 1, categories = if (category != null) arrayOf(category.name) else emptyArray()
+					limit = 1,
+					categories = if (category != null) arrayOf(category.name) else emptyArray(),
+					sorting = Sorting.Uploaded,
+					sortingOrder = SortingOrder.DESC
 				)?.results?.firstOrNull()?.uploadDate ?: error("Could not get listings")) < lastCheck.time
 			) {
+				println("Tried checking for new listings, but the latest one is older than last check")
 				return Listings(ArrayList(), 0)
 			}
 			
 			while (true) {
-				val listings =
-					getListings(limit = pageSize, page = page, categories = if (category != null) arrayOf(category.name) else emptyArray())
-						?: break
+				val listings = getListings(
+					limit = pageSize,
+					page = page,
+					categories = if (category != null) arrayOf(category.name) else emptyArray(),
+					sorting = Sorting.Uploaded,
+					sortingOrder = SortingOrder.DESC
+				) ?: break
 				
 				if (listings.results.isEmpty()) {
-					return getListings(limit = page * pageSize, categories = if (category != null) arrayOf(category.name) else emptyArray())
+					return getListings(
+						limit = page * pageSize,
+						categories = if (category != null) arrayOf(category.name) else emptyArray(),
+						sorting = Sorting.Uploaded,
+						sortingOrder = SortingOrder.DESC
+					)
 				}
 				
 				if (listings.results.last().uploadDate > lastCheck.time) {
@@ -95,14 +109,19 @@ open class Torrust(private var baseURL: String) {
 					} else {
 						return getListings(
 							limit = page * pageSize + listings.results.size,
-							categories = if (category != null) arrayOf(category.name) else emptyArray()
+							categories = if (category != null) arrayOf(category.name) else emptyArray(),
+							sorting = Sorting.Uploaded,
+							sortingOrder = SortingOrder.DESC
 						)
 					}
 				} else {
-					for (i in listings.results.indices) {
+					for (i in listings.results.indices.reversed()) {
 						if (listings.results[i].uploadDate > lastCheck.time) {
 							return getListings(
-								limit = page * pageSize + i, categories = if (category != null) arrayOf(category.name) else emptyArray()
+								limit = page * pageSize + i,
+								categories = if (category != null) arrayOf(category.name) else emptyArray(),
+								sorting = Sorting.Uploaded,
+								sortingOrder = SortingOrder.DESC
 							)
 						}
 					}
@@ -112,7 +131,12 @@ open class Torrust(private var baseURL: String) {
 			
 			return Listings(ArrayList(), 0)
 		} else {
-			return getListings(limit = -1, categories = if (category != null) arrayOf(category.name) else emptyArray())
+			return getListings(
+				limit = -1,
+				categories = if (category != null) arrayOf(category.name) else emptyArray(),
+				sorting = Sorting.Uploaded,
+				sortingOrder = SortingOrder.DESC
+			)
 		}
 	}
 	
