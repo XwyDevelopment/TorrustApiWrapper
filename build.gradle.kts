@@ -36,7 +36,7 @@ publishing {
                 maven("https://repo.reeve.dev/repository/maven-releases/") {
                     name = "Nexus"
                     credentials {
-                        username = System.getenv("NEXUS_REPO_USERNAME")
+                        username = System.getenv("NEXUS_REPO_USER")
                         password = System.getenv("NEXUS_REPO_PASSWORD")
                     }
                 }
