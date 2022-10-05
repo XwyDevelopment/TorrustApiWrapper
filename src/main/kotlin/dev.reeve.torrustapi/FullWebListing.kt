@@ -5,13 +5,13 @@ class FullWebListing(
 	description: String,
 	fileSize: String,
 	infoHash: String,
-	val files: ArrayList<File>,
 	leechers: Int,
 	seeders: Int,
 	title: String,
 	torrentId: Long,
 	uploadDate: Long,
-	uploader: String
+	uploader: String,
+	val files: ArrayList<File>
 ) : Listings.WebListing(
 	categoryId,
 	description,
