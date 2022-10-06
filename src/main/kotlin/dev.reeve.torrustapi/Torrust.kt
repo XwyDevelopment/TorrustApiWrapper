@@ -21,7 +21,7 @@ import kotlin.reflect.KFunction
  * @param baseURL the main url of the url (including `/torrust` if it's there)
  * @notice This class requires the use of a login
  */
-open class Torrust(private var baseURL: String) {
+open class Torrust(private var baseURL: String, private val trackStats: Boolean = false) {
 	val calls = HashMap<String, Long>()
 	private val client = OkHttpClient()
 	private val JSON = "application/json".toMediaTypeOrNull()
@@ -252,8 +252,10 @@ open class Torrust(private var baseURL: String) {
 	}
 	
 	private fun increaseCalls(function: KFunction<*>) {
-		calls.putIfAbsent(function.name, 0)
-		calls[function.name] = calls[function.name]!! + 1
+		if (trackStats) {
+			calls.putIfAbsent(function.name, 0)
+			calls[function.name] = calls[function.name]!! + 1
+		}
 	}
 	
 	enum class Sorting {
