@@ -15,35 +15,35 @@ class BasicTest {
 	
 	@Test
 	fun getListings() {
-		val listings = torrust.getListings(user)
+		val listings = torrust.getListings()
 		println("Listings: ${listings?.results?.size}")
 		assert(listings?.results?.isNotEmpty() ?: false)
 	}
 	
 	@Test
 	fun get100Listings() {
-		val listings = torrust.getListings(user, limit = 100)
+		val listings = torrust.getListings(limit = 100)
 		println("Listings: ${listings?.results?.size}")
 		assert(listings?.results?.size == 100)
 	}
 	
 	@Test
 	fun getAllListings() {
-		val listings= torrust.getListings(user, limit = -1)
+		val listings= torrust.getListings(limit = -1)
 		println("Listings: ${listings?.results?.size}")
 		assert(listings != null && listings.results.size > 100)
 	}
 	
 	@Test
 	fun getName() {
-		val name = torrust.getWebsiteName(user) ?: error("Name is null")
+		val name = torrust.getWebsiteName() ?: error("Name is null")
 		println("Website name: $name")
-		assert(name == (torrust.getWebsitePublicSettings(user)?.websiteName ?: error("Name is null")))
+		assert(name == (torrust.getWebsitePublicSettings()?.websiteName ?: error("Name is null")))
 	}
 	
 	@Test
 	fun getCategories() {
-		val categories = torrust.getCategories(user) ?: error("No categories")
+		val categories = torrust.getCategories() ?: error("No categories")
 		println(categories.joinToString("\n") {
 			it.name + ": " + it.numberOfTorrents
 		})
@@ -52,7 +52,7 @@ class BasicTest {
 	
 	@Test
 	fun getDescription() {
-		val game = torrust.getListings(user, limit = 1)?.results?.firstOrNull()
+		val game = torrust.getListings(limit = 1)?.results?.firstOrNull()
 		
 		assert(game != null)
 		
@@ -61,7 +61,7 @@ class BasicTest {
 	
 	@Test
 	fun getTorrentById() {
-		val listing = torrust.getWebListing(user, -1000)
+		val listing = torrust.getWebListing(-1000)
 		assert(listing == null)
 	}
 }

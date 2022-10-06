@@ -13,6 +13,8 @@ import okio.sink
 import java.io.File
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.reflect.KFunction
 
 /**
  * This class is used to interact with the Torrust API.
@@ -20,6 +22,7 @@ import kotlin.collections.ArrayList
  * @notice This class requires the use of a login
  */
 open class Torrust(private var baseURL: String) {
+	val calls = HashMap<String, Long>()
 	private val client = OkHttpClient()
 	private val JSON = "application/json".toMediaTypeOrNull()
 	private val gson = GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create()
@@ -56,11 +59,13 @@ open class Torrust(private var baseURL: String) {
 			}" + // works with multiple as a comma separated list
 					"&search=${search.filter { it.isLetterOrDigit() }}" // looks like on the website everything other than letters and numbers are removed
 		
+		increaseCalls(::getListings)
 		return getData(null, url)
 	}
 	
 	fun getWebListing(id: Long): FullWebListing? {
 		val url = baseURL + "torrent/${id}"
+		increaseCalls(::getWebListing)
 		return getData(null, url)
 	}
 	
@@ -160,16 +165,19 @@ open class Torrust(private var baseURL: String) {
 	
 	fun getWebsiteName(): String? {
 		val url = baseURL + "settings/name"
+		increaseCalls(::getWebsiteName)
 		return getData(null, url)
 	}
 	
 	fun getWebsitePublicSettings(): PublicSettings? {
 		val url = baseURL + "settings/public"
+		increaseCalls(::getWebsitePublicSettings)
 		return getData(null, url)
 	}
 	
 	fun getCategories(): Array<Category>? {
 		val url = baseURL + "category"
+		increaseCalls(::getCategories)
 		return getData(null, url)
 	}
 	
@@ -184,6 +192,7 @@ open class Torrust(private var baseURL: String) {
 	
 	fun deleteTorrent(user: User, id: Long): TorrentResponse {
 		val url = baseURL + "torrent/${id}"
+		increaseCalls(::deleteTorrent)
 		return deleteData(user, url)
 	}
 	
@@ -197,6 +206,7 @@ open class Torrust(private var baseURL: String) {
 		
 		val request = Request.Builder().url(url).post(body).addAuth(user).build()
 		client.newCall(request).execute().use {
+			increaseCalls(::uploadTorrent)
 			return getWrappedData(it.body!!.string())
 		}
 	}
@@ -207,6 +217,7 @@ open class Torrust(private var baseURL: String) {
 		val request = Request.Builder().url(url).post(gson.toJson(login).toRequestBody(JSON)).build()
 		
 		client.newCall(request).execute().use {
+			increaseCalls(::login)
 			return getWrappedData(it.body!!.string())
 		}
 	}
@@ -238,6 +249,11 @@ open class Torrust(private var baseURL: String) {
 	private fun Request.Builder.addAuth(user: User?): Request.Builder {
 		if (user != null) addHeader("authorization", "Bearer ${user.token}")
 		return this
+	}
+	
+	private fun increaseCalls(function: KFunction<*>) {
+		calls.putIfAbsent(function.name, 0)
+		calls[function.name] = calls[function.name]!! + 1
 	}
 	
 	enum class Sorting {
