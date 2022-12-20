@@ -19,5 +19,9 @@ data class Listings(
 		val torrentId: Long,
 		val uploadDate: Long,
 		val uploader: String
-	)
+	) {
+		override fun toString(): String {
+			return "WebListing(categoryId=$categoryId, description='$description', fileSize='$fileSize', infoHash='$infoHash', leechers=$leechers, seeders=$seeders, title='$title', torrentId=$torrentId, uploadDate=$uploadDate, uploader='$uploader')"
+		}
+	}
 }
